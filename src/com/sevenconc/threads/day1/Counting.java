@@ -1,4 +1,4 @@
-package com.sevenconc.threads;
+package com.sevenconc.threads.day1;
 
 public class Counting {
   public static void main(String... args) throws InterruptedException {
