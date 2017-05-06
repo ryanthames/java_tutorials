@@ -1,30 +1,30 @@
 package main.java.com.concurrency_tut;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.*;
 
 public class WordCount {
-  private static final Map<String, Integer> counts = new HashMap<>();
+  private static final int NUM_COUNTERS = 2;
 
-  public static void main(String... args) {
-    Iterable<Page> pages = new Pages(100000, "Users/ryanthames/enwiki.xml");
+  public static void main(String... args) throws InterruptedException {
+    BlockingQueue<Page> queue = new ArrayBlockingQueue<>(100);
+    ConcurrentMap<String, Integer> counts = new ConcurrentHashMap<>();
 
-    for(Page page : pages) {
-      Iterable<String> words = new Words(page.getText());
+    ExecutorService executor = Executors.newCachedThreadPool();
 
-      for(String word : words) {
-        countWord(word);
-      }
+    for(int i = 0; i < NUM_COUNTERS; ++i) {
+      executor.execute(new Counter(queue, counts));
     }
-  }
 
-  private static void countWord(String word) {
-    Integer currentCount = counts.get(word);
+    Thread parser = new Thread(new Parser(queue));
 
-    if(currentCount == null) {
-      counts.put(word, 1);
-    } else {
-      counts.put(word, currentCount + 1);
+    parser.start();
+    parser.join();
+
+    for(int i = 0; i < NUM_COUNTERS; ++i) {
+      queue.put(new PoisonPill());
     }
+
+    executor.shutdown();
+    executor.awaitTermination(10L, TimeUnit.MINUTES);
   }
 }
